@@ -10,7 +10,7 @@
             <p>请选择缩略图:</p>
             <input type="file" name="file" @change="getFile($event)" ref="file" value="12" />
             <input type="text" name="fileVal" v-model="thumb">
-            <a @click="uploadImg" class="button">提交</a>
+            <a @click="uploadImg(file)" class="button">提交</a>
         </label>
         <label for="" v-for="(name,index) in inputs" :key="index" v-show="inputs.length>0">
             {{ name }}
@@ -20,6 +20,11 @@
             <div v-else-if="name === '讲师描述' " id="teacherEditor" style="margin-top: 10px">
     
             </div>
+            <label for="" v-else-if="name === '讲师头像'">请选择缩略图:
+                <input type="file" name="file" @change="getFile($event)" ref="file" value="12" />
+                <input type="text" name="fileVal" v-model="teacherThumb">
+                <a @click="uploadImg(file)" class="button">提交</a>
+            </label>
             <input v-else-if="name === '报名截止时间'" type="datetime-local" name="head" v-model="values[index]" :value="values[index]">
             <input v-else type="text" name="head" v-model="values[index]" :value="name">
         </label>
@@ -61,6 +66,7 @@ function getFormat() {
 }
 
 export default {
+    // file --- img 文件上传
     data() {
         return {
             name: 'Edit',
@@ -70,14 +76,12 @@ export default {
             isEnd: false,
             file: '',
             thumb: '',
+            teacherThumb: '',
             editor: [0, 1],
             editorCont: '',
             tEditorCont: '',
             singleUrl: '',
             courseId: 0,
-            startTime: {
-                time: ''
-            },
             id: 0,
 
         }
@@ -129,6 +133,7 @@ export default {
             this.$http.get(this.singleUrl, {
                 withCredentials: true
             }).then((res) => {
+                // 读取已有表格，以后优化，写死了现在
                 let info = res.data.data
                 let product = info.productCode ? info.productCode : 0
                 console.log(info)
@@ -144,7 +149,7 @@ export default {
                 this.values[6] = info.address
                 this.values[7] = info.lecturer
                 this.values[8] = info.lecturerTitle
-                this.values[9] = info.lecturerThumb
+                this.teacherThumb = info.lecturerThumb
                 this.editor[1].txt.html(info.lecturerDesc)
                 this.isShow = info.isShow === 1 ? true : false
                 this.isEnd = info.isEnd === 1 ? true : false
@@ -153,20 +158,24 @@ export default {
         saveBlog() {
             let stateVal = this.isShow ? 1 : 0
             let endVal = this.isEnd ? 1 : 0
-
+            let _this = this
+            // 读取表格，上传
             let event = {
                 'courseId': this.courseId,
                 'title': this.values[0],
+                'thumb': this.thumb,
                 'eventTime': this.values[1],
                 'signupEndTime': this.values[2],
                 'category': this.values[3],
                 'suitablePeople': this.values[4],
-                'content': this.editor[1].txt.html(),
+                'content': this.editor[0].txt.html(),
                 'address': this.values[6],
                 'lecturer': this.values[7],
                 'lecturerTitle': this.values[8],
-                'lecturerThumb': this.values[9],
-                'lecturerDesc': this.editor[1].txt.html()
+                'lecturerThumb': this.teacherThumb,
+                'lecturerDesc': this.editor[1].txt.html(),
+                'isShow': stateVal,
+                'isEnd': endVal
             }
 
             let config = {
@@ -180,39 +189,54 @@ export default {
                 let event2 = {
                     'id': this.id,
                     'title': this.values[0],
+                    'thumb': this.thumb,
                     'eventTime': this.values[1],
                     'signupEndTime': this.values[2],
                     'category': this.values[3],
                     'suitablePeople': this.values[4],
-                    'content': this.editor[1].txt.html(),
+                    'content': this.editor[0].txt.html(),
                     'address': this.values[6],
                     'lecturer': this.values[7],
                     'lecturerTitle': this.values[8],
-                    'lecturerThumb': this.values[9],
-                    'lecturerDesc': this.editor[1].txt.html()
+                    'lecturerThumb': this.teacherThumb,
+                    'lecturerDesc': this.editor[1].txt.html(),
+                    'isShow': stateVal,
+                    'isEnd': endVal
                 }
                 this.$http.put(`${apiUrl}/admin/patsnap/event`, qs.stringify(event2), {
                     withCredentials: true
                 }).then(function (res) {
-                    console.log(res)
+                    if (res.data.status === 1) {
+                        alert('提交成功')
+                        _this.$router.go(-1)
+                    } else {
+                        alert('提交失败')
+                    }
+
                 }).catch((err) => {
-                    console.log(err)
+                    alert('提交失败')
+
                 })
             } else {
                 this.$http.post(`${apiUrl}/admin/patsnap/event`, qs.stringify(event), {
                     withCredentials: true
                 }).then(function (res) {
-                    console.log(res)
+                    if (res.data.status === 1) {
+                        alert('提交成功')
+                        _this.$router.go(-1)
+                    } else {
+                        alert('提交失败')
+                    }
                 }).catch((err) => {
-                    console.log(err)
+                    alert('提交失败')
                 })
             }
 
         },
-        uploadImg() {
+        uploadImg(file) {
             let formData = new FormData();
-            formData.append('file', this.file);
-
+            formData.append('file', file);
+            console.log(file)
             let _this = this
 
             let config = {
@@ -224,7 +248,12 @@ export default {
                 withCredentials: true
             }, config).then(function (res) {
                 console.log(res)
-                _this.thumb = res.data.data[0]
+                if (res.data.errno == '0') {
+                    alert('图片提交成功')
+                    _this.thumb = res.data.data[0]
+                } else {
+                    alert('图片提交失败')
+                }
             }).catch((err) => {
                 console.log(err)
                 // this.$router.push({
@@ -336,7 +365,7 @@ export default {
             &:active
                 position: relative
                 top: 1px
-    #editor        
+    #editor,#teacherEditor
             h1 
                 font-size: 36px
                 font-weight : 500
@@ -352,12 +381,15 @@ export default {
             h5 
                 font-size: 14px
                 font-weight : 500
-            ol
-                list-style : decimal
-                li
+            .w-e-text        
+                
+                ol
                     list-style : decimal
-            ul 
-                list-style : disc
-                li
+                    li
+                        list-style : decimal
+                ul 
                     list-style : disc
+                    li
+                        list-style : disc
+</style>
 </style>

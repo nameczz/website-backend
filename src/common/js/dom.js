@@ -1,5 +1,5 @@
-// export let apiUrl = 'http://www-api.zhihuiya.com'
-export let apiUrl = 'http://192.168.38.19:9000'
+export let apiUrl = 'http://www-api.zhihuiya.com'
+    // export let apiUrl = 'http://192.168.38.19:9000'
 
 export function addClass(el, className) {
     if (hasClass(el, className)) {

@@ -14,7 +14,7 @@
                 </td>
             </tr>
         </tablebox>
-        <pagination v-if="totalPages > 0" :showPages="10" :totalPages="totalPages" @pageChange="pageChange"></pagination>
+        <pagination v-if="totalPages > 0" :showPages="showPages" :totalPages="totalPages" @pageChange="pageChange"></pagination>
     </div>
 </template>
 
@@ -35,6 +35,7 @@ export default {
         return {
             name: 'event',
             bigTh: 1,
+            showPages: 0,
             totalPages: 0,
             options: [],
             optionsId: [],
@@ -42,7 +43,7 @@ export default {
             selectedHead: 'id',
             direction: 'asc',
             showTheads: ['ID', '标题', '状态', '创建时间', '更新时间', '操作'],
-            theads: ['id', 'title', 'statusValue' ,'created', 'updated', 'actions'],
+            theads: ['id', 'title', 'statusValue', 'created', 'updated', 'actions'],
             tables: {
                 'id': [],
                 'title': [],
@@ -51,10 +52,10 @@ export default {
                 'updated': []
             },
             big: 3,
-            buttonName: '添加文章',
+            buttonName: '添加活动',
             query: {
-                'inputs': ['标题', '活动时间', '报名截止时间', '活动分类' , '适合人群', '活动详情', 
-                '活动地址', '活动讲师', '讲师头衔', '讲师头像', '讲师描述'
+                'inputs': ['标题', '活动时间', '报名截止时间', '活动分类', '适合人群', '活动详情',
+                    '活动地址', '活动讲师', '讲师头衔', '讲师头像', '讲师描述'
                 ]
             }
         }
@@ -62,7 +63,12 @@ export default {
     created() {
         getCurrentTable(this.pageUrl, this.theads, this.tables)
         getTotalPages(getOriginUrl(this.name)).then((res) => {
-            this.totalPages = res.data.total
+            this.totalPages = Math.ceil(res.data.total / 20)
+            if (this.totalPages <= 10) {
+                this.showPages = this.totalPages
+            } else {
+                this.showPages = 10
+            }
         })
     },
     computed: {

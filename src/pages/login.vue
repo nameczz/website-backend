@@ -17,7 +17,7 @@
                     </label>
                     <div class="btn-box">
                         <span>Forgot Password?</span>
-                        <a @click="login">Log In</a>
+                        <a @click="login" class="button">Log In</a>
                     </div>
                 </form>
             </div>
@@ -63,7 +63,7 @@ export default {
                 withCredentials: true
             }, config).then(function (res) {
                 console.log(res)
-                _this.$cookie.set('Token', res.data.session.id);
+                _this.$cookie.set('Token', res.data.session);
                 if (res.data.isSuccess === 'true') {
                     _this.error = false
                     _this.$router.push({
@@ -114,6 +114,24 @@ export default {
             border : 1px solid $color-input-border
             border-radius : 4px
             text-align : right
+            .button
+                display: inline-block;
+                outline: none;
+                cursor: pointer;
+                text-align: center;
+                text-decoration: none;
+                color : #fff
+                background : green
+                padding: 10px 20px;
+                text-shadow: 0 1px 1px rgba(0,0,0,.3);
+                border-radius: 6px;
+                box-shadow: 0 1px 2px rgba(0,0,0,.2);
+                &:hover
+                    cursor : pointer
+                    background : #51a351
+                &:active
+                    position: relative
+                    top: 1px
             label
                 display : block
                 margin : 10px

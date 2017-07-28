@@ -15,7 +15,7 @@
         </div>
         <label for="" v-for="(value, key, index) in selects" :key="index" v-if="value">
             {{ key}}
-            <select :name="`select${index}`" @change="optionChange" v-model="selected[index]">
+            <select :name="`select${index}`"  v-model="selected[index]">
                 <option value="" v-for="(option, num) in value" :key="num" :value="num">
                     {{ option }}
                 </option>
@@ -38,13 +38,13 @@ import wangEditor from 'wangeditor'
 let qs = require('qs');
 
 export default {
-    // index && editor 无用，去掉会报错
     // values---input value    selected---selected value
     // thumb 图片路径 editor 编辑器对象 editorContent 编辑内容 singleUrl 请求单文api
     // inputs 输入框 selects 
     data() {
         return {
             name: 'Edit',
+            type: '',
             inputs: [],
             selects: {
                 '分类': [],
@@ -95,7 +95,7 @@ export default {
                 Vue.set(this.values, 1, info.auth)
                 Vue.set(this.selected, 0, info.categor - 1)
                 Vue.set(this.selected, 1, product)
-                this.thumb = info.thumb
+                this.thumb = info.thumb || info.logo
                 this.isShow = info.status === 1 ? true : false
                 this.id = info.id
                 this.editor.txt.html(info.body)
@@ -112,6 +112,8 @@ export default {
             if (data.url) {
                 this.singleUrl = data.url
             }
+            console.log(data)
+            this.type = data.type
 
             for (let i = 0; i < data.inputs.length; i++) {
                 Vue.set(this.values, i, '')
@@ -130,16 +132,16 @@ export default {
             this.file = event.target.files[0];
         },
         // 看下optionchange还有用没
-        optionChange(event) {
-            let value = event.target.value
-            let name = event.target.name
-            console.log(event)
-            if (name === 'select0') {
-                Vue.set(this.selected, 0, value)
-            } else {
-                Vue.set(this.selected, 1, value)
-            }
-        },
+        // optionChange(event) {
+        //     let value = event.target.value
+        //     let name = event.target.name
+        //     console.log(event)
+        //     if (name === 'select0') {
+        //         Vue.set(this.selected, 0, value)
+        //     } else {
+        //         Vue.set(this.selected, 1, value)
+        //     }
+        // },
         createEditor() {
             this.editor = new wangEditor('#editor')
             let _this = this
@@ -177,7 +179,7 @@ export default {
                     withCredentials: true
                 }, config).then(function (res) {
                     imgUrl = res.data.data[0]
-                    insert('/static/callout.jpg')
+                    insert(imgUrl)
                 }).catch((err) => {
                     console.log(err)
 
@@ -197,9 +199,10 @@ export default {
                 'title': this.values[0],
                 'auth': this.values[1],
                 'type': 'node',
-                'categor': this.selected[0],
+                'categor': this.selected[0] + 1,
                 'productCode': this.selected[1],
                 'thumb': this.thumb,
+                'logo': this.thumb,
                 'status': stateVal,
                 'body': this.editor.txt.html()
             }
@@ -216,31 +219,39 @@ export default {
                     'id': this.id,
                     'title': this.values[0],
                     'auth': this.values[1],
-                    'categor': this.selected[0],
+                    'categor': this.selected[0] + 1,
                     'productCode': this.selected[1],
                     'thumb': this.thumb,
+                    'logo': this.thumb,
                     'status': stateVal,
                     'body': this.editor.txt.html()
                 }
-                this.$http.put(`${apiUrl}/admin/patsnap/articles`, qs.stringify(article2), {
+                this.$http.put(`${apiUrl}/admin/patsnap/${_this.type}`, qs.stringify(article2), {
                     withCredentials: true
                 }).then(function (res) {
-                    alert('修改完成')
-                    _this.$router.go(-1)
+                    if (res.data.status === 1) {
+                        alert('修改完成')
+                        _this.$router.go(-1)
+                    } else {
+                        alert('修改失败')
+                    }
                 }).catch((err) => {
                     alert('提交失败，请重试')
                     console.log(err)
                 })
             } else {
-                this.$http.post(`${apiUrl}/admin/patsnap/articles`, qs.stringify(article), {
+                this.$http.post(`${apiUrl}/admin/patsnap/${_this.type}`, qs.stringify(article), {
                     withCredentials: true
                 }).then(function (res) {
-                    alert('修改完成')
-                    _this.$router.go(-1)
-                    console.log(res)
+                    if (res.data.status === 1) {
+                        alert('修改完成')
+                        _this.$router.go(-1)
+                    } else {
+                        alert('修改失败')
+                    }
+
                 }).catch((err) => {
                     alert('提交失败，请重试')
-                    console.log(err)
                 })
             }
 
@@ -259,17 +270,17 @@ export default {
             this.$http.post(`${apiUrl}/admin/file_manager/attachments/uploadImage`, formData, {
                 withCredentials: true
             }, config).then(function (res) {
-                if (res.errno === 1) {
+
+                if (res.data.errno == '0') {
                     alert('图片提交成功')
+                    _this.thumb = res.data.data[0]
+                } else {
+                    alert('图片提交失败')
                 }
-                console.log(res)
-                _this.thumb = res.data.data[0]
+                
             }).catch((err) => {
                 alert('图片提交失败')
-                console.log(err)
-                // this.$router.push({
-                //     name: 'login'
-                // })
+      
             })
         }
     }
@@ -328,7 +339,7 @@ export default {
             &:active
                 position: relative
                 top: 1px
-    #editor        
+    #editor
             h1 
                 font-size: 36px
                 font-weight : 500
@@ -344,12 +355,14 @@ export default {
             h5 
                 font-size: 14px
                 font-weight : 500
-            ol
-                list-style : decimal
-                li
+            .w-e-text        
+                
+                ol
                     list-style : decimal
-            ul 
-                list-style : disc
-                li
+                    li
+                        list-style : decimal
+                ul 
                     list-style : disc
+                    li
+                        list-style : disc
 </style>

@@ -2,7 +2,8 @@
     <div class="table-box">
         <table>
             <thead>
-                <th v-for="(th, index) in theads" :key="th" class="title" :class="{ 'big': index === bigTh, 'none': th === '操作'}" @click="sort(th, index)">
+                <th v-if="th !== '重复'" v-for="(th, index) in theads" :key="th" class="title" 
+                :class="{ 'big': index === bigTh, 'none': th === '操作'}" @click="sort(th, index)">
                     {{ th }}
                 </th>
             </thead>

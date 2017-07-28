@@ -2,7 +2,7 @@
     <div class="actions">
         <ul>
             <li>
-                <a :href="watchUrl" target="_blank">
+                <a :href="watchUrl" target="_blank" v-if="type !== 'attachments'">
                     查看
                 </a>
             </li>
@@ -12,7 +12,7 @@
                 </a>
             </li>
             <li>
-                <a @click="changeCont">
+                <a @click="changeCont" v-if="type !== 'attachments'">
                     编辑
                 </a>
             </li>
@@ -25,7 +25,7 @@ import { apiUrl } from 'common/js/dom'
 import { getSingleUrl } from 'common/js/apiUrl.js'
 
 let url = `${apiUrl}/admin`
-
+const s3Url = ' http://www.zhihuiya.com.s3-website.cn-north-1.amazonaws.com.cn/website-mockup'
 export default {
     props: {
         url: {
@@ -49,7 +49,7 @@ export default {
         }
     },
     created() {
-        
+
     },
     computed: {
         deleteUrl() {
@@ -60,11 +60,13 @@ export default {
         },
         watchUrl() {
             if (this.type === 'articles') {
-                return `http://www.zhihuiya.com/${this.type}/view/${this.id}`
+                return `${s3Url}/${this.type}/view/${this.id}`
             } else if (this.type === 'event') {
-                return `http://www.zhihuiya.com/huodong/view/${this.id}`
+                return `${s3Url}/huodong/view/${this.id}`
             } else if (this.type === 'customers') {
-                return `http://www.zhihuiya.com/anli/view/${this.id}`
+                return `${s3Url}/anli/view/${this.id}`
+            } else if (this.type === 'attachments') {
+                return `${s3Url}/anli/view/${this.id}`
             }
         }
     },
@@ -74,13 +76,18 @@ export default {
                 this.$http.delete(this.deleteUrl, {
                     withCredentials: true
                 }).then((res) => {
-                    alert('删除成功')
+                    this.$router.go(0)
                 })
             }
         },
         pushQuery() {
-            this.query['url'] = getSingleUrl(this.type, this.id)
             console.log(this.query)
+            if(this.type === 'code_info'){
+                this.query['url'] = this.deleteUrl
+            } else {
+                this.query['url'] = getSingleUrl(this.type, this.id)
+            }
+            
             return this.query
         },
         changeCont() {

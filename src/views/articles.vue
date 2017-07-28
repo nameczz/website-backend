@@ -5,8 +5,8 @@
             <edit-button class="edit" :name="buttonName" :query="query"></edit-button>
             <search v-if="options.length > 0" class="search-keywords" :options="options" @option-change="optionChange"></search>
     
-            <!-- <search-input class="search-keywords" type="title" @search="searchType"></search-input>
-                <search-input class="search-keywords" type="categorValue" @search="searchType"></search-input> -->
+            <search-input class="search-keywords" type="title" @search="searchType"></search-input>
+            <search-input class="search-keywords" type="auth" @search="searchType"></search-input>
         </div>
         <tablebox :theads="showTheads" class="table-box" @thClick="sortTable" :bigTh="bigTh">
             <tr v-for="(value, key, index) in tables" v-show="tables.id[index]">
@@ -37,7 +37,7 @@ import { getTotalPages } from 'api/getPages'
 import { getPageUrl, getSortUrl, getSystemCodenameUrl } from 'common/js/apiUrl.js'
 import { getSmallKeywords } from 'api/seo'
 
-const urlKeywords = `${apiUrl}/admin/patsnap/articles`
+let urlKeywords = `${apiUrl}/admin/patsnap/articles`
 
 export default {
     data() {
@@ -69,15 +69,17 @@ export default {
             query: {
                 'inputs': ['标题', '作者'],
                 'options01': [],
-                'options02': ['请选择']
+                'options02': ['请选择'],
+                'type': this.name
             }
         }
     },
     created() {
         getSmallKeywords(`${getSystemCodenameUrl(10001)}`, this.options, this.optionsId)
+
         getCurrentTable(this.pageUrl, this.theads, this.tables)
         getTotalPages(urlKeywords).then((res) => {
-            this.totalPages = res.data.total
+            this.totalPages = Math.ceil(res.data.total / 20)
             if (this.totalPages <= 10) {
                 this.showPages = this.totalPages
             } else {
@@ -88,6 +90,9 @@ export default {
         this.getOptions(this.query.options02, 10006)
     },
     computed: {
+        codeNameUrl() {
+            return `${urlKeywords}?categor=${this.selectedOption}`
+        },
         pageUrl() {
             let pageUrl = getPageUrl(this.name, this.selectedPage)
             return pageUrl
@@ -109,6 +114,17 @@ export default {
         selectedOption(val) {
             console.log(val)
             getCurrentTable(this.codeNameUrl, this.theads, this.tables)
+            this.showPages = 0
+            this.totalPages = 0
+            getTotalPages(this.codeNameUrl).then((res) => {
+                this.totalPages = Math.ceil(res.data.total / 20)
+                console.log(res)
+                if (this.totalPages <= 10) {
+                    this.showPages = this.totalPages
+                } else {
+                    this.showPages = 10
+                }
+            })
         },
         pageUrl(val) {
             getCurrentTable(val, this.theads, this.tables)
@@ -131,6 +147,7 @@ export default {
             this.selectedPage = el
         },
         optionChange(el) {
+            console.log(this.optionsId[el])
             this.selectedOption = this.optionsId[el]
         },
         sortTable(el) {
@@ -157,7 +174,7 @@ export default {
         searchType(message, type) {
             console.log(message)
             console.log(type)
-            let url = `${getSystemCodenameUrl(this.selectedOption)}&${type}=${message}`
+            let url = `${urlKeywords}?categor=${this.selectedOption}&${type}=${message}`
 
             getCurrentTable(url, this.theads, this.tables)
         }

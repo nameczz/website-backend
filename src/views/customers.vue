@@ -2,14 +2,14 @@
     <div class="articles">
         <breadcrumb :name="name"></breadcrumb>
         <div class="edit-box">
-            <search v-if="options.length > 0" class="search-keywords" :options="options" @option-change="optionChange"></search>
             <edit-button :name="buttonName" :query="query"></edit-button>
+            <search v-if="options.length > 0" class="search-keywords" :options="options" @option-change="optionChange"></search>
             <search-input class="search-keywords" type="title" @search="searchType"></search-input>
-            <search-input class="search-keywords" type="auth" @search="searchType"></search-input>
+            <search-input class="search-keywords" type="auth" @search="searchType"></search-input> 
         </div>
         <tablebox :theads="showTheads" class="table-box" @thClick="sortTable" :bigTh="bigTh">
             <tr v-for="(value, key, index) in tables" v-show="tables.id[index]">
-                <td v-for="(th, num) in theads" :class="{big: num === bigTh}" v-if="th !== 'actions'">
+                <td v-for="(th, num) in theads" :class="{big: num === bigTh, id: num === 0}" v-if="th !== 'actions'">
                     {{tables[th][index]}}
                 </td>
                 <td v-else>
@@ -17,7 +17,7 @@
                 </td>
             </tr>
         </tablebox>
-        <pagination v-if="totalPages > 0" :showPages="10" :totalPages="totalPages" @pageChange="pageChange"></pagination>
+        <pagination v-if="totalPages > 0" :showPages="showPages" :totalPages="totalPages" @pageChange="pageChange"></pagination>
     </div>
 </template>
 
@@ -42,6 +42,7 @@ export default {
         return {
             name: 'customers',
             bigTh: 2,
+            showPages: 0,
             totalPages: 0,
             options: [],
             optionsId: [],
@@ -62,19 +63,25 @@ export default {
                 'updated': []
             },
             big: 3,
-            buttonName: '添加文章',
+            buttonName: '添加客户案例',
             query: {
                 'inputs': ['标题1', '作者'],
-                'options01': ['请选择']
+                'options01': ['请选择'],
+                'type': 'customers'
             }
         }
     },
     created() {
         getSmallKeywords(`${getSystemCodenameUrl(10002)}`, this.options, this.optionsId)
-        console.log(this.options)
+        
         getCurrentTable(this.pageUrl, this.theads, this.tables)
         getTotalPages(getOriginUrl(this.name)).then((res) => {
-            this.totalPages = res.data.total
+            this.totalPages = Math.ceil(res.data.total / 20)    
+            if (this.totalPages <= 10) {
+                this.showPages = this.totalPages
+            } else {
+                this.showPages = 10
+            }
         })
         this.getOptions(this.query.options01, 10002)
     },
@@ -101,6 +108,17 @@ export default {
         selectedOption(val) {
             console.log(val)
             getCurrentTable(this.codeNameUrl, this.theads, this.tables)
+            this.showPages = 0
+            this.totalPages = 0
+            getTotalPages(this.codeNameUrl).then((res) => {
+                this.totalPages = Math.ceil(res.data.total / 20)
+                console.log(res)
+                if (this.totalPages <= 10) {
+                    this.showPages = this.totalPages
+                } else {
+                    this.showPages = 10
+                }
+            })
         },
         pageUrl(val) {
             getCurrentTable(val, this.theads, this.tables)
@@ -152,7 +170,9 @@ export default {
             })
         },
         searchType(message, type) {
-            let url = `${getSystemCodenameUrl(this.selectedOption)}&${type}=${message}`
+            console.log(message)
+            console.log(type)
+            let url = `${this.pageUrl}?categor=${this.selectedOption}&${type}=${message}`
 
             getCurrentTable(url, this.theads, this.tables)
         }
@@ -184,6 +204,8 @@ export default {
                 box-sizing : border-box
                 line-height : 20px
                 text-align : left
+                max-width : 220px
+                word-wrap: break-word
                 border-bottom : 1px solid $color-input-border
                 &.big
                     flex: 2

@@ -1,22 +1,23 @@
 <template>
     <div class="attachments">
         <breadcrumb :name="name"></breadcrumb>
+        <search-input class="search-keywords" type="title" @search="searchType"></search-input>
         <big-img v-if="showImg" @clickImg="viewImg" :imgSrc="imgSrc"></big-img>
-        <tablebox class="tableBox" :theads="theads" :bigTh="bigTh" @thClick="sortDom(el, theads, tables, type, sortUrl, direction)">
+        <tablebox class="tableBox" :theads="theads" :bigTh="bigTh" @thClick="sortTable">
             <tr v-for="(value, key, index) in tables" v-show="tables.id[index]">
                 <td v-for="(th, num) in theads" :class="{big: num === bigTh}" v-if="th!=='actions'">
                     <img v-if="th === 'img'" :src="tables.path[index]" width="180" alt="图片" @click="showBig($event)" :ref="'img'+index">
                     <span v-else>{{tables[th][index]}}</span>
                 </td>
                 <td v-else>
-                    <v-actions where="patsnap" :type="name" :id="tables.id[index]"></v-actions>
+                    <v-actions where="file_manager" :type="name" :id="tables.id[index]"></v-actions>
                 </td>
                 <!-- <td v-else>
-                            <img :src="tables.path[index]" width="180" alt="图片" @click="showBig($event)" :ref="'img'+index">
-                        </td> -->
+                                        <img :src="tables.path[index]" width="180" alt="图片" @click="showBig($event)" :ref="'img'+index">
+                                    </td> -->
             </tr>
         </tablebox>
-        <pagination :showPages="10" :totalPages="100"></pagination>
+        <pagination v-if="totalPages > 0" :showPages="showPages" :totalPages="totalPages" @pageChange="pageChange"></pagination>
     </div>
 </template>
 
@@ -26,18 +27,20 @@ import tablebox from 'components/table-box'
 import pagination from 'components/pagination'
 import bigImg from 'components/bigImg';
 import vActions from 'components/actions'
+import searchInput from 'components/search-input'
 
 import { arrSplice, apiUrl } from 'common/js/dom'
+import { getTotalPages } from 'api/getPages'
 
 import { sortDom } from 'api/sort'
 import { getCurrentTable } from 'api/getTable'
 
-const originalUrl = `${apiUrl}/admin/file_manager/attachments`
+let originalUrl = `${apiUrl}/admin/file_manager/attachments`
 
 export default {
     data() {
         return {
-            name: 'Attachments',
+            name: 'attachments',
             theads: ['id', 'img', 'title', 'path', 'actions'],
             tables: {
                 'id': [],
@@ -46,6 +49,10 @@ export default {
                 'title': [],
                 'actions': []
             },
+            totalPages: 0,
+            showPages: 0,
+            selectedPage: 1,
+            selectedHead: 'id',
             bigTh: 10,
             type: 'id',
             direction: 'asc',
@@ -55,10 +62,29 @@ export default {
     },
     created() {
         getCurrentTable(originalUrl, this.theads, this.tables)
+        getTotalPages(originalUrl).then((res) => {
+            this.totalPages = Math.ceil(res.data.total / 20)    
+            if (this.totalPages <= 10) {
+                this.showPages = this.totalPages
+            } else {
+                this.showPages = 10
+            }
+        })
     },
     computed: {
         sortUrl() {
-            return `${apiUrl}/admin/file_manager/attachments/index/sort:${this.type}/direction:${this.direction}`
+            return `${apiUrl}/admin/file_manager/attachments/index/sort:${this.selectedHead}/direction:${this.direction}`
+        },
+        pageUrl() {
+            return `${apiUrl}/admin/file_manager/attachments/index/page:${this.selectedPage}/sort:${this.selectedHead}/direction:${this.direction}`
+        },
+    },
+    watch: {
+        pageUrl(val) {
+            getCurrentTable(val, this.theads, this.tables)
+        },
+        sortUrl(val) {
+            getCurrentTable(val, this.theads, this.tables)
         }
     },
     methods: {
@@ -66,6 +92,9 @@ export default {
             this.$router.push({
                 name: url
             })
+        },
+         pageChange(el) {
+            this.selectedPage = el
         },
         showBig(e) {
             document.body.scrollTop = '100px';
@@ -76,13 +105,29 @@ export default {
         viewImg() {
             this.showImg = false;
         },
+        sortTable(el) {
+            if (el === '操作') {
+                return false
+            }
+            let index = this.theads.indexOf(el)
+            this.selectedHead = this.theads[index]
+            this.direction = this.direction === 'desc' ? 'asc' : 'desc'
+        },
+        searchType(message, type) {
+            console.log(message)
+            console.log(type)
+            let url = `${originalUrl}?title=${message}`
+
+            getCurrentTable(url, this.theads, this.tables)
+        }
     },
     components: {
         breadcrumb,
         tablebox,
         pagination,
         bigImg,
-        vActions
+        vActions,
+        searchInput
     }
 }
 </script>

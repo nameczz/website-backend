@@ -3,7 +3,7 @@
         <breadcrumb :name="name"></breadcrumb>
     
         <div class="edit-box">
-            <a href="http://192.168.38.19:9000/admin/patsnap/order/orders_extract" class="button" >{{buttonName}}</a>
+            <a href="http://192.168.38.19:9000/admin/patsnap/order/orders_extract" class="button">{{buttonName}}</a>
         </div>
         <div class="search-box">
             <input type="datetime-local" name="search" v-model="startTime" :value="startTime">
@@ -12,13 +12,13 @@
             <a class="button" @click="submitSearch">搜索</a>
         </div>
         <tablebox :theads="showTheads" class="table-box" @thClick="sortTable" :bigTh="bigTh">
-            <tr v-for="(value, key, index) in tables" v-show="tables.id[index]" >
-                <td v-for="(th, num) in theads" :class="{big: num === bigTh}" >
+            <tr v-for="(value, key, index) in tables" v-show="tables.id[index]" :class="{repeat: tables.isRepeat[index] > 0}">
+                <td v-for="(th, num) in theads" :class="{big: num === bigTh}" v-if="th !='isRepeat'">
                     {{tables[th][index]}}
                 </td>
             </tr>
         </tablebox>
-        <pagination v-if="totalPages > 0" :showPages="10" :totalPages="totalPages" @pageChange="pageChange"></pagination>
+        <pagination v-if="totalPages > 0" :showPages="showPages" :totalPages="totalPages" @pageChange="pageChange"></pagination>
     </div>
 </template>
 
@@ -54,19 +54,21 @@ export default {
     data() {
         return {
             name: 'order',
-            bigTh: 2,
-            startTime: '2017-01-01T00:00',
-            endTime: '2017-07-01T00:00',
+            bigTh: 3,
+            startTime: '2017-07-28T00:00',
+            endTime: '2017-07-29T00:00',
             values: [],
+            showPages: 0,
             totalPages: 0,
             options: [],
             optionsId: [],
             selectedPage: 1,
             selectedHead: 'id',
             direction: 'asc',
-            showTheads: ['ID', '姓名', '邮箱', '订阅信息', '公司名称', '工作岗位', '联系方式', '提交时间', '搜索渠道', '媒介类型', '关键词', '推广计划', '推广单元', '重复'],
+            showTheads: ['ID', '姓名', '邮箱', '订阅信息', '公司名称', '工作岗位', '联系方式', '提交时间', '搜索渠道',
+                '媒介类型', '关键词', '推广计划', '推广单元', '省份', '重复'],
             theads: ['id', 'username', 'useremail', 'indus', 'firmname', 'firmpos', 'usertel', 'createtime', 'utmSource',
-                'utmMedium', 'utmTerm', 'utmCampaign', 'utmContent', 'isRepeat'],
+                'utmMedium', 'utmTerm', 'utmCampaign', 'utmContent', 'province', 'isRepeat'],
             tables: {
                 'id': [],
                 'username': [],
@@ -81,17 +83,23 @@ export default {
                 'utmTerm': [],
                 'utmCampaign': [],
                 'utmContent': [],
+                'province': [],
                 'isRepeat': []
             },
             big: 3,
             buttonName: '导出excel',
-            
+
         }
     },
     created() {
         getCurrentTable(this.pageUrl, this.theads, this.tables)
         getTotalPages(getOriginUrl(this.name)).then((res) => {
-            this.totalPages = res.data.total
+            this.totalPages = Math.ceil(res.data.total / 20)
+            if (this.totalPages <= 10) {
+                this.showPages = this.totalPages
+            } else {
+                this.showPages = 10
+            }
         })
     },
     computed: {
@@ -144,9 +152,26 @@ export default {
 
         },
         submitSearch() {
+            let startTime = new Date(this.startTime).getTime() / 1000
+            let endTime = new Date(this.endTime).getTime() / 1000
             
-            console.log(this.startTime)
-            console.log(this.endTime)
+            let url = `${getOriginUrl(this.name)}?startTime=${startTime}&endTime=${endTime}`
+            
+            this.totalPages = 0
+            this.showPages = 0
+            
+            getTotalPages(url).then((res) => {
+                console.log(res)
+                this.totalPages = Math.ceil(res.data.total / 20)
+                if (this.totalPages <= 10) {
+                    this.showPages = this.totalPages
+                } else {
+                    this.showPages = 10
+                }
+                console.log(this.totalPages)
+            })
+
+            getCurrentTable(url, this.theads, this.tables)
         }
     }
 }
@@ -178,7 +203,7 @@ export default {
             text-decoration: none;
             color : #fff
             background : green
-            padding: 10px 20px;
+            padding: 6px 20px;
             text-shadow: 0 1px 1px rgba(0,0,0,.3);
             border-radius: 6px;
             box-shadow: 0 1px 2px rgba(0,0,0,.2);
@@ -193,6 +218,8 @@ export default {
         margin-bottom : 10px
         tr
             display : flex
+            &.repeat
+                color : red
             td
                 flex : 1
                 max-width : 120px

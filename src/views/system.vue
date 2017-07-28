@@ -4,15 +4,21 @@
         <div class="search-box">
             <search v-if="options.length > 0" class="search-keywords" :options="options" @option-change="optionChange"></search>
             <span class="execl-in">
-                <a @click="showForm" class="button">导入</a>
+                <a @click="showForm('file')" class="button">导入</a>
+            </span>
+            <span class="new-word">
+                <a @click="showForm('new')" class="button">新增</a>
             </span>
             <search-input class="search-keywords" type="infoCode" @search="searchType"></search-input>
             <search-input class="search-keywords" type="value" @search="searchType"></search-input>
         </div>
         <tablebox :theads="theads" class="table-box" @thClick="sortTable">
             <tr v-for="(value, key, index) in tables" v-show="tables.id[index]">
-                <td v-for="(th, num) in theads">
+                <td v-for="(th, num) in theads" v-if="th!=='actions'">
                     {{tables[th][index]}}
+                </td>
+                <td v-else>
+                    <v-actions where="system" type="code_info" :id="tables.id[index]" :query="query" nav="file"></v-actions>
                 </td>
             </tr>
         </tablebox>
@@ -27,6 +33,7 @@ import { arrSplice } from 'common/js/dom'
 import pagination from 'components/pagination'
 import search from 'components/search'
 import searchInput from 'components/search-input'
+import vActions from 'components/actions'
 
 import { getCurrentTable } from 'api/getTable'
 import { getSeoKeywords } from 'api/seo'
@@ -46,7 +53,7 @@ export default {
             selectedPage: 1,
             selectedHead: 'id',
             direction: 'asc',
-            theads: ['id', 'infoCode', 'value', 'codeId', 'codeName', 'rank'],
+            theads: ['id', 'infoCode', 'value', 'codeId', 'codeName', 'rank', 'actions'],
             tables: {
                 'total': 0,
                 'id': [],
@@ -54,16 +61,22 @@ export default {
                 'value': [],
                 'codeId': [],
                 'codeName': [],
-                'rank': []
+                'rank': [],
+                'actions': []
             },
-            big: 3
+            big: 3,
+            query: {
+                codeId: this.selectedOption,
+                toDo: 'change'
+            }
         }
     },
     created() {
         getSeoKeywords(getSystemOriginUrl(), this.options, this.optionsId)
         getCurrentTable(this.pageUrl, this.theads, this.tables)
         getTotalPages(getSystemOriginUrl()).then((res) => {
-            this.totalPages = res.data.total
+            this.totalPages = Math.ceil(res.data.total / 20)
+            console.log(res)
             if (this.totalPages <= 10) {
                 this.showPages = this.totalPages
             } else {
@@ -86,6 +99,17 @@ export default {
         selectedOption(val) {
             console.log(val)
             getCurrentTable(this.codeNameUrl, this.theads, this.tables)
+            this.showPages = 0
+            this.totalPages = 0
+            getTotalPages(this.codeNameUrl).then((res) => {
+                this.totalPages = Math.ceil(res.data.total / 20)
+                console.log(res)
+                if (this.totalPages <= 10) {
+                    this.showPages = this.totalPages
+                } else {
+                    this.showPages = 10
+                }
+            })
         },
         selectedPage(val) {
             console.log(this.pageUrl)
@@ -100,7 +124,8 @@ export default {
         pagination,
         search,
         searchInput,
-        tablebox
+        tablebox,
+        vActions
     },
     methods: {
         pageChange(el) {
@@ -112,7 +137,10 @@ export default {
         showForm() {
             this.$router.push({
                 name: 'file',
-                params: { codeId: this.selectedOption }
+                query: {
+                    codeId: this.selectedOption,
+                    toDo: type
+                }
             })
         },
         sortTable(el) {
@@ -126,7 +154,7 @@ export default {
             console.log(type)
             let url = `${getSystemCodenameUrl(this.selectedOption)}&${type}=${message}`
 
-           getCurrentTable(url, this.theads, this.tables)
+            getCurrentTable(url, this.theads, this.tables)
         }
     }
 }
@@ -148,24 +176,24 @@ export default {
             flex: 1
         .execl-in
             flex: 1
-            .button
-                display: inline-block;
-                outline: none;
-                cursor: pointer;
-                text-align: center;
-                text-decoration: none;
-                color : #fff
-                background : green
-                padding: 10px 20px;
-                text-shadow: 0 1px 1px rgba(0,0,0,.3);
-                border-radius: 6px;
-                box-shadow: 0 1px 2px rgba(0,0,0,.2);
-                &:hover
-                    cursor : pointer
-                    background : #51a351
-                &:active
-                    position: relative
-	                top: 1px
+        .button
+            display: inline-block;
+            outline: none;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            color : #fff
+            background : green
+            padding: 6px 20px;
+            text-shadow: 0 1px 1px rgba(0,0,0,.3);
+            border-radius: 6px;
+            box-shadow: 0 1px 2px rgba(0,0,0,.2);
+            &:hover
+                cursor : pointer
+                background : #51a351
+            &:active
+                position: relative
+                top: 1px
     .table-box
         flex : 1
         margin-bottom : 10px
